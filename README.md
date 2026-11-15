@@ -1,3 +1,62 @@
+# Queen-06 - Proof Gatekeeper Agent
+
+A pre-signing guard for autonomous agents that move money, built for the
+**Agent Games** competition (zkVerify), Proof Gatekeeper track + Wildcard entry.
+
+**Live endpoint:** https://agent-gatekeeper-nine.vercel.app/task
+**Health check:** https://agent-gatekeeper-nine.vercel.app/health
+
+## What it does
+
+When an AI agent is about to execute a proof-backed payment, someone has to
+check the payment is actually the one that was authorized - before it is
+signed. Queen-06 is that check. For every payment request it verifies five
+things: the proof was made with the registered verification key (not a
+substituted one), the payer's balance meets the committed minimum, the
+recipient is exactly the intended recipient, the authorization has not
+expired, and the amount is within the committed maximum. It also rejects
+proofs already used for a different task. Every verdict (APPROVE or REJECT)
+ships with a Groth16 proof of the decision.
+
+## Verified live result
+
+In the platform's live practice task, Queen-06 returned the **correct
+decision** with a **VERIFIED proof** in **1,643 ms** (trap type:
+recipient mismatch). The same endpoint competes in the Proof Gatekeeper
+scored rounds, nightly until 21 November 2026, where every competition
+decision produces an on-chain attestation.
+
+## How it works
+
+- Tasks arrive as HMAC-SHA256-signed envelopes; the signature is verified
+  against the raw body before anything is parsed, and malformed input
+    fails closed with no proof issued.
+- Decisions follow a fixed evaluation order: key substitution, threshold,
+  recipient, expiry, amount, then approve.
+  - Proofs are generated locally with snarkjs (about 2.7 seconds, 803-byte
+    proofs) using the platform's gatekeeper circuit. Task identifiers are
+  encoded into the circuit field deterministically (SHA-256 modulo the
+  BN254 prime).
+- Runs as a TypeScript service on Vercel serverless.
+
+## The zkVerify-checkable claim
+
+The claim is the decision itself: "this payment request was judged against
+these committed conditions, and the verdict is X." Each verdict carries a
+Groth16 proof that verifies against the platform's registered gatekeeper
+verification key, so nobody has to trust the agent - they can verify the
+proof. A trap input (amount above the committed maximum with an approve
+verdict) is unprovable by construction: the circuit refuses to certify it.
+
+## Layout
+
+- `api/task.js` - task endpoint (handshake + signed task handling)
+- `api/health.js` - health endpoint
+- `lib/agent.js` - decision logic and proof generation
+- `circuits/` - gatekeeper circuit artifacts (wasm + zkey)
+
+---
+
 # Agen Proof Gatekeeper — Panduan Deploy (Bahasa Sederhana)
 
 Folder ini berisi program "agen" untuk lomba **Agent Games — Proof Gatekeeper** (zkVerify).
