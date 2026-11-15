@@ -1,0 +1,1 @@
+{"$schema":"https://openapi.vercel.sh/vercel.json","functions":{"api/health.js":{"maxDuration":10},"api/task.js":{"includeFiles":"circuits/**","maxDuration":60,"memory":1024}},"rewrites":[{"destination":"/api/health","source":"/health"},{"destination":"/api/task","source":"/task"}]}
