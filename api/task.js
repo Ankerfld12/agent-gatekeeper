@@ -1,6 +1,6 @@
 // POST /api/task — Proof Gatekeeper task endpoint (also served at /task via rewrite).
 // The raw body is required for HMAC verification, so Vercel's body parser is off.
-import { handleTask, getSecret, signBody } from '../lib/agent.js';
+import { handleTask, getSecret, signBody, warmUpProveAssets } from '../lib/agent.js';
 
 export const config = {
   api: { bodyParser: false },
@@ -25,6 +25,10 @@ function readRawBody(req) {
 // or as POSTs that do not carry a task envelope, so both are answered with
 // the handshake; genuine task envelopes keep the strict signed flow below.
 function sendHandshake(res) {
+  // [AUDIT-PATCH P7] Preflight/health pings warm the proving assets in
+  // the background so a task POST landing on this same instance skips
+  // the cold snarkjs import + artifact reads.
+  warmUpProveAssets();
   const secret = getSecret();
   if (!secret) {
     res.status(500).json({ error: 'AGENT_HMAC_SECRET is not configured' });
